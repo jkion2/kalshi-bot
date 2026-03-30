@@ -104,6 +104,10 @@ class MarketScanner:
         if m.spread > self.cfg.max_spread_cents:
             return False
 
+        # Skip Bitcoin markets because this bot isnt tailored to it (yet)
+        if "BTCD" in m.market_id or "BTC" in m.market_id.upper():
+            return False
+
         return True
 
     # ── Ranking ────────────────────────────────────────────────────────────────

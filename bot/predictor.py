@@ -114,6 +114,7 @@ class MarketPredictor:
 
     async def _call_claude(self, market: Market, brief: ResearchBrief) -> Optional[dict]:
         """Call Claude to get probability estimate. Returns parsed JSON or None."""
+        raw_text = ""
         try:
             prompt = self._build_prompt(market, brief)
             response = await self.client.messages.create(
@@ -122,14 +123,26 @@ class MarketPredictor:
                 system     = PREDICTOR_SYSTEM_PROMPT,
                 messages   = [{"role": "user", "content": prompt}],
             )
-            text = response.content[0].text.strip()
+            raw_text = response.content[0].text.strip()
+            if not raw_text:
+                log.warning(f"Predictor: Claude returned empty response for {market.market_id}")
+                return None
+            text = raw_text
             if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
+                parts = text.split("```")
+                if len(parts) >= 2:
+                    text = parts[1]
+                    if text.startswith("json"):
+                        text = text[4:]
             return json.loads(text)
+        except json.JSONDecodeError as exc:
+            log.warning(
+                f"Predictor JSON parse failed for {market.market_id}: {exc} | "
+                f"Raw response: {raw_text[:300]!r}"
+            )
+            return None
         except Exception as exc:
-            log.warning(f"Predictor Claude call failed: {exc}")
+            log.warning(f"Predictor Claude call failed for {market.market_id}: {exc}")
             return None
 
     def _build_prompt(self, market: Market, brief: ResearchBrief) -> str:

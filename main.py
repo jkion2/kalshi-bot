@@ -19,6 +19,7 @@ from bot.executor import TradeExecutor
 from bot.ledger import TradeLedger
 from bot.kalshi_client import KalshiClient
 from config import BotConfig
+from bot.settler import TradeSettler
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -39,12 +40,16 @@ async def run_cycle(
     risk: RiskManager,
     executor: TradeExecutor,
     ledger: TradeLedger,
+    settler: TradeSettler,
     cfg: BotConfig,
 ) -> None:
     """One full scan → research → predict → risk-check → execute cycle."""
 
     log.info("═" * 60)
     log.info("Starting new trading cycle")
+
+    # 0. SETTLE - check if any open trades have been resolved
+    await settler.settle_open_trades()
 
     # 1. SCAN — find markets worth looking at
     candidates = await scanner.scan()
@@ -110,6 +115,7 @@ async def main(cfg: BotConfig) -> None:
     risk       = RiskManager(cfg)
     executor   = TradeExecutor(client, cfg)
     ledger     = TradeLedger(cfg)
+    settler    = TradeSettler(client, ledger)
 
     cycle = 0
     while True:

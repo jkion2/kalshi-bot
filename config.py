@@ -46,7 +46,7 @@ class BotConfig:
     max_slippage_pct: float = 0.02     # Abort if price moves > 2% before fill
 
     # ── Scheduling ─────────────────────────────────────────────────────────────
-    cycle_interval_seconds: int = 3600  # Run full cycle every 60 minutes
+    cycle_interval_seconds: int = 1800  # Run full cycle every 30 minutes
 
     # ── File Paths ─────────────────────────────────────────────────────────────
     data_dir: Path = field(default_factory=lambda: Path("data"))

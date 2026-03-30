@@ -43,6 +43,7 @@ class RiskManager:
             self._check_daily_loss,
             self._check_drawdown,
             self._check_edge,
+            self._check_duplicate_position,
             self._check_concurrent_positions,
             self._check_daily_api_cost,
         ]
@@ -74,6 +75,12 @@ class RiskManager:
     def _check_edge(self, signal, ledger) -> tuple[bool, str]:
         if signal.edge < self.cfg.min_edge:
             return False, f"Edge {signal.edge:.1%} below minimum {self.cfg.min_edge:.1%}"
+        return True, ""
+
+    def _check_duplicate_position(self, signal, ledger) -> tuple[bool, str]:
+        open_markets = {t["market_id"] for t in ledger._trades if t["status"] == "open"}
+        if signal.market_id in open_markets:
+            return False, f"Already holding open position in {signal.market_id}"
         return True, ""
 
     def _check_concurrent_positions(self, signal, ledger) -> tuple[bool, str]:
