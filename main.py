@@ -126,7 +126,7 @@ async def main(cfg: BotConfig) -> None:
         cycle += 1
         log.info(f"Cycle #{cycle}")
         try:
-            await run_cycle(scanner, researcher, predictor, risk, executor, ledger, cfg)
+            await run_cycle(scanner, researcher, predictor, risk, executor, ledger, settler, cfg)
         except Exception as exc:
             log.exception(f"Unhandled error in cycle #{cycle}: {exc}")
 
