@@ -111,18 +111,25 @@ rm STOP      # resume
 ## Project structure
 
 ```
+## Project structure
+```
 kalshi-bot/
 ├── main.py                  # entry point
 ├── config.py                # all settings in one place
+├── debug.py                 # one-time diagnostic script
 ├── bot/
-│   ├── scanner.py           # step 1: find markets
-│   ├── researcher.py        # step 2: research with Claude
+│   ├── scanner.py           # step 1: find markets, filters out Bitcoin
+│   ├── researcher.py        # step 2: research with Claude (selective web search)
 │   ├── predictor.py         # step 3: estimate probability
 │   ├── risk.py              # step 4a: Kelly sizing + safety checks
 │   ├── executor.py          # step 4b: place or simulate orders
-│   └── ledger.py            # step 5: track trades and metrics
+│   ├── settler.py           # step 5a: auto-resolves trades via Kalshi API
+│   └── ledger.py            # step 5b: track trades, P&L, and bankroll
 └── skills/predict-market-bot/
-    └── SKILL.md             # bot architecture reference
+    ├── SKILL.md             # bot architecture reference
+    └── references/
+        └── failure_log.md   # loss patterns and lessons learned
+```
 ```
 
 ---
