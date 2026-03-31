@@ -73,7 +73,14 @@ async def run_cycle(
     log.info(f"Predictor generated {len(signals)} trade signals")
 
     # 4. RISK + EXECUTE — validate and place (or simulate) orders
+    traded_events = set()  # track event prefixes within this cycle
     for signal in signals:
+        # Block opposing positions within the same cycle
+        event_prefix = signal.market_id.rsplit("-", 1)[0]
+        if event_prefix in traded_events:
+            log.warning(f"Skipping {signal.market_id}: already traded opposing market this cycle")
+            continue
+
         approved, reason = risk.validate(signal, ledger)
         if not approved:
             log.warning(f"Risk rejected {signal.market_id}: {reason}")
@@ -82,6 +89,7 @@ async def run_cycle(
         position_size = risk.kelly_size(signal, ledger.bankroll)
         result = await executor.execute(signal, position_size)
         ledger.record(signal, position_size, result)
+        traded_events.add(event_prefix)
         log.info(
             f"{'[PAPER]' if cfg.paper_mode else '[LIVE]'} "
             f"Traded {signal.market_id} | "
