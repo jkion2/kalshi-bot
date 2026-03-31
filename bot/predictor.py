@@ -70,7 +70,7 @@ class MarketPredictor:
         yes_edge = model_prob - market.yes_price
         no_edge  = (1 - model_prob) - market.no_price  # same as -(yes_edge)
 
-        if abs(yes_edge) > abs(no_edge):
+        if abs(yes_edge) >= abs(no_edge):
             side      = "yes"
             edge      = yes_edge
             mkt_price = market.yes_price
@@ -79,8 +79,15 @@ class MarketPredictor:
             edge      = no_edge
             mkt_price = market.no_price
 
+        # Use absolute value for threshold check
+        if abs(edge) < self.cfg.min_edge:
+            log.info(
+                f"  No signal: edge {edge:.1%} < min {self.cfg.min_edge:.1%} "
+                f"(model={model_prob:.0%}, market={market.yes_price:.0%})"
+            )
+
         # Gate: only signal if edge and confidence are high enough
-        if edge < self.cfg.min_edge:
+        if abs(edge) < self.cfg.min_edge:
             log.info(
                 f"  No signal: edge {edge:.1%} < min {self.cfg.min_edge:.1%} "
                 f"(model={model_prob:.0%}, market={market.yes_price:.0%})"

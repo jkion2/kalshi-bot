@@ -46,6 +46,7 @@ class RiskManager:
             self._check_duplicate_position,
             self._check_concurrent_positions,
             self._check_daily_api_cost,
+            self._check_opposing_positions,
         ]
         for check in checks:
             ok, reason = check(signal, ledger)
@@ -93,6 +94,16 @@ class RiskManager:
         cost = ledger.today_api_cost()
         if cost >= self.cfg.max_daily_api_cost_usd:
             return False, f"Daily API cost ${cost:.2f} at limit ${self.cfg.max_daily_api_cost_usd:.2f}"
+        return True, ""
+
+    def _check_opposing_positions(self, signal, ledger) -> tuple[bool, str]:
+        """Block trades where we already hold the opposite side of the same event."""
+        event_prefix = signal.market_id.rsplit("-", 1)[0]
+        for trade in ledger._trades:
+            if trade["status"] == "open" and trade["market_id"] != signal.market_id:
+                existing_prefix = trade["market_id"].rsplit("-", 1)[0]
+                if existing_prefix == event_prefix:
+                    return False, f"Already holding open position in opposing market {trade['market_id']}"
         return True, ""
 
     # ── Kelly Criterion Position Sizing ───────────────────────────────────────

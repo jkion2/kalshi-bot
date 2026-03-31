@@ -30,8 +30,8 @@ class BotConfig:
     kelly_fraction: float = 0.25       # Quarter-Kelly (safer than full Kelly)
 
     # ── Edge Thresholds ────────────────────────────────────────────────────────
-    min_edge: float = 0.04             # Only trade if model_prob - market_price > 4%
-    min_confidence: float = 0.60       # Model must be at least 60% confident
+    min_edge: float = 0.06             # Only trade if model_prob - market_price > 6%
+    min_confidence: float = 0.68       # Model must be at least 68% confident
 
     # ── Market Filters ─────────────────────────────────────────────────────────
     min_volume: int = 10              # Minimum contracts traded (liquidity filter)
