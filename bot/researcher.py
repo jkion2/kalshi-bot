@@ -178,10 +178,18 @@ class MarketResearcher:
                 text = text[4:]
         try:
             return json.loads(text)
-        except Exception:
-            return {
-                "sentiment_score": 0.0,
-                "headline_summary": "Parse error.",
-                "key_facts": [],
-                "needs_web_search": False,
-            }
+        except json.JSONDecodeError:
+            pass
+        import re
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+        return {
+            "sentiment_score": 0.0,
+            "headline_summary": "Parse error.",
+            "key_facts": [],
+            "needs_web_search": False,
+        }

@@ -136,6 +136,14 @@ class MarketPredictor:
                         text = text[4:]
             return json.loads(text)
         except json.JSONDecodeError as exc:
+            # Try to find JSON block inside the text if Claude added extra prose
+            import re
+            match = re.search(r'\{[^{}]*"probability"[^{}]*\}', raw_text, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    pass
             log.warning(
                 f"Predictor JSON parse failed for {market.market_id}: {exc} | "
                 f"Raw response: {raw_text[:300]!r}"

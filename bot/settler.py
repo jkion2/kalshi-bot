@@ -117,8 +117,13 @@ class TradeSettler:
         trade["status"]    = status
         trade["closed_at"] = settlement.get("close_time") or datetime.now(timezone.utc).isoformat()
 
-        # Update bankroll and peak
-        self.ledger.bankroll = round(self.ledger.bankroll + pnl, 2)
+# Recalculate bankroll from scratch after every settlement
+        self.ledger.bankroll = round(
+            self.ledger.cfg.starting_bankroll + sum(
+                t["pnl"] for t in self.ledger._trades
+                if t["pnl"] is not None
+            ), 2
+        )
         if self.ledger.bankroll > self.ledger.peak_bankroll:
             self.ledger.peak_bankroll = self.ledger.bankroll
 
