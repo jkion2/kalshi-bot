@@ -32,6 +32,8 @@ Always respond with a JSON object in this EXACT format:
   "reasoning":   "<2-3 sentence explanation of your reasoning>"
 }
 
+CRITICAL: Output the JSON object FIRST, before any other text. No preamble, no analysis before the JSON. Start your response with { and end with }.
+
 probability: your estimate of the true YES probability
 confidence: 0.5 = very uncertain, 1.0 = highly certain
 """
@@ -68,7 +70,7 @@ class MarketPredictor:
         yes_edge = model_prob - market.yes_price
         no_edge  = (1 - model_prob) - market.no_price  # same as -(yes_edge)
 
-        if abs(yes_edge) >= abs(no_edge):
+        if abs(yes_edge) > abs(no_edge):
             side      = "yes"
             edge      = yes_edge
             mkt_price = market.yes_price
@@ -119,7 +121,7 @@ class MarketPredictor:
             prompt = self._build_prompt(market, brief)
             response = await self.client.messages.create(
                 model      = "claude-haiku-4-5-20251001",
-                max_tokens = 400,
+                max_tokens = 800,
                 system     = PREDICTOR_SYSTEM_PROMPT,
                 messages   = [{"role": "user", "content": prompt}],
             )
