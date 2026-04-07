@@ -45,6 +45,7 @@ class TradeSignal:
     confidence: float           # Model's confidence in the estimate
     expected_value: float       # EV of the trade
     reasoning: str              # Claude's explanation
+    days_to_expiry: float = 0.0
     created_at: datetime = field(default_factory=datetime.utcnow)
 
 

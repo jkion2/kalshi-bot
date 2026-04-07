@@ -47,6 +47,61 @@ class TradeSettler:
 
         return settled
 
+    async def sync_positions_on_startup(self) -> None:
+    """
+    On startup, fetch all open positions from Kalshi and reconcile
+    against trades.json. Adds any positions found on Kalshi that
+    aren't in the local ledger so nothing gets orphaned.
+    """
+    try:
+        data = await self.client.get_positions()
+        positions = data.get("market_positions", [])
+        if not positions:
+            log.info("Settler: no open positions found on Kalshi at startup")
+            return
+
+        existing_ids = {t["market_id"] for t in self.ledger._trades if t["status"] == "open"}
+        added = 0
+
+        for pos in positions:
+            market_id = pos.get("ticker", "")
+            if market_id and market_id not in existing_ids:
+                log.warning(
+                    f"Settler: found orphaned position {market_id} on Kalshi "
+                    f"not in ledger — adding as open trade"
+                )
+                self.ledger._trades.append({
+                    "trade_id":          f"RECOVERED-{market_id}",
+                    "market_id":         market_id,
+                    "title":             market_id,
+                    "side":              pos.get("side", "yes"),
+                    "model_probability": 0.5,
+                    "market_price":      pos.get("average_price", 0.5),
+                    "edge":              0.0,
+                    "confidence":        0.5,
+                    "expected_value":    0.0,
+                    "reasoning":         "Recovered from Kalshi on startup",
+                    "position_usd":      0.0,
+                    "fill_price":        pos.get("average_price", 0.5),
+                    "contracts":         pos.get("position", 0),
+                    "simulated":         False,
+                    "outcome":           None,
+                    "pnl":               None,
+                    "status":            "open",
+                    "days_to_expiry":    1.0,
+                    "opened_at":         datetime.now(timezone.utc).isoformat(),
+                    "closed_at":         None,
+                    "failure_class":     None,
+                })
+                added += 1
+
+        if added > 0:
+            self.ledger.save()
+            log.info(f"Settler: recovered {added} orphaned positions from Kalshi")
+
+    except Exception as exc:
+        log.warning(f"Settler: startup sync failed: {exc}")
+        
     # ── Check a single market ─────────────────────────────────────────────────
     async def _check_market(self, trade: dict) -> Optional[dict]:
         """
@@ -61,7 +116,7 @@ class TradeSettler:
             result = market.get("result", "")
 
             # Kalshi statuses: active, closed, settled, finalized
-            if status not in ("settled", "finalized"):
+            if status not in ("settled", "finalized", "closed"):
                 return None
 
             # result is "yes" or "no"
@@ -75,7 +130,7 @@ class TradeSettler:
             }
 
         except Exception as exc:
-            log.debug(f"Settler: could not fetch {trade['market_id']}: {exc}")
+            log.warning(f"Settler: could not fetch {trade['market_id']}: {exc}")
             return None
 
     # ── Apply settlement to a trade ───────────────────────────────────────────

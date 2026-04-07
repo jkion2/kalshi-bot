@@ -85,10 +85,58 @@ class RiskManager:
         return True, ""
 
     def _check_concurrent_positions(self, signal, ledger) -> tuple[bool, str]:
-        n = ledger.open_position_count()
-        if n >= self.cfg.max_concurrent_positions:
-            return False, f"Already at max {n} concurrent positions"
-        return True, ""
+    """
+    Two separate position buckets:
+    - Short term (< 1 day): up to 60% of max positions
+    - Long term (>= 1 day): up to 40% of max positions
+    When a long term trade enters its final 24 hours it moves to short term bucket.
+    """
+    from datetime import datetime, timezone
+
+    # Scale total max positions with bankroll
+    total_max = int(10 + max(0, ledger.bankroll - 100) / 40)
+    total_max = min(total_max, 25)
+    total_max = max(total_max, 5)
+
+    short_max = max(3, int(total_max * 0.60))
+    long_max  = max(2, int(total_max * 0.40))
+
+    # Classify existing open trades
+    now = datetime.now(timezone.utc)
+    short_count = 0
+    long_count  = 0
+
+    for t in ledger._trades:
+        if t["status"] != "open":
+            continue
+        # Parse how much time is left
+        if t.get("closed_at"):
+            continue
+        opened = datetime.fromisoformat(t["opened_at"].replace("Z", "+00:00"))
+        # Use days_to_expiry stored on the signal if available
+        days_left = t.get("days_to_expiry", 1.0)
+        if days_left is None:
+            days_left = 1.0
+        if days_left < 1.0:
+            short_count += 1
+        else:
+            long_count += 1
+
+    # Classify the incoming signal
+    is_short = signal.days_to_expiry < 1.0
+
+    if is_short and short_count >= short_max:
+        return False, (
+            f"Short term bucket full: {short_count}/{short_max} "
+            f"(total_max={total_max}, bankroll=${ledger.bankroll:.0f})"
+        )
+    if not is_short and long_count >= long_max:
+        return False, (
+            f"Long term bucket full: {long_count}/{long_max} "
+            f"(total_max={total_max}, bankroll=${ledger.bankroll:.0f})"
+        )
+
+    return True, ""
 
     def _check_daily_api_cost(self, signal, ledger) -> tuple[bool, str]:
         cost = ledger.today_api_cost()

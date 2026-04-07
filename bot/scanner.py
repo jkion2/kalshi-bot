@@ -127,7 +127,7 @@ class MarketScanner:
             return uncertainty * 0.5 + liquidity * 0.3 + urgency * 0.2
 
         ranked = sorted(markets, key=score, reverse=True)
-        top    = ranked[:3]
+        top    = ranked[:25]
         for m in top:
             log.debug(f"  Candidate: {m.market_id} | YES={m.yes_price:.0%} | vol={m.volume}")
         return top
