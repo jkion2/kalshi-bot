@@ -108,6 +108,10 @@ class MarketScanner:
         if "BTCD" in m.market_id or "BTC" in m.market_id.upper():
             return False
 
+        # Skip markets that have already expired
+        if m.days_to_expiry < 0:
+            return False
+
         return True
 
     # ── Ranking ────────────────────────────────────────────────────────────────
